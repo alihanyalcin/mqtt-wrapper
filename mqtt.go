@@ -20,6 +20,8 @@ type MQTTConfig struct {
 	Topics []string
 	QoS int
 
+	client MQTT.Client
+	options *MQTT.ClientOptions
 	state ConnectionState
 }
 
@@ -34,12 +36,13 @@ func (m *MQTTConfig) createConnection() error {
 		return errors.New("value of qos must be 0, 1, 2")
 	}
 
-	options, err := m.createOptions()
+	var err error
+	m.options, err = m.createOptions()
 	if err != nil {
 		return err
 	}
 
-	err = m.connect(options)
+	err = m.connect()
 	if err != nil {
 		return err
 	}
@@ -47,10 +50,10 @@ func (m *MQTTConfig) createConnection() error {
 	return nil
 }
 
-func (m *MQTTConfig) connect(opts *MQTT.ClientOptions) error {
-	client := MQTT.NewClient(opts)
+func (m *MQTTConfig) connect() error {
+	m.client = MQTT.NewClient(m.options)
 
-	token := client.Connect()
+	token := m.client.Connect()
 	if token.Wait() && token.Error() != nil {
 		return token.Error()
 	}
@@ -62,7 +65,7 @@ func (m *MQTTConfig) connect(opts *MQTT.ClientOptions) error {
 		for _, topic := range m.Topics {
 			topics[topic] = byte(m.QoS)
 		}
-		subscribeToken := client.SubscribeMultiple(topics, m.onMessageReceived)
+		subscribeToken := m.client.SubscribeMultiple(topics, m.onMessageReceived)
 		if subscribeToken.Wait() && subscribeToken.Error() != nil {
 			return subscribeToken.Error()
 		}
