@@ -25,7 +25,7 @@ type MQTTConfig struct {
 	state ConnectionState
 }
 
-func (m *MQTTConfig) createConnection() error {
+func (m *MQTTConfig) CreateConnection() error {
 	m.state =  Disconnected
 
 	if len(m.Brokers) == 0 {
