@@ -26,6 +26,11 @@ type MQTTConfig struct {
 }
 
 func (m *MQTTConfig) CreateConnection() error {
+
+	if m.client != nil {
+		return errors.New("mqtt client already initialized")
+	}
+
 	m.state =  Disconnected
 
 	if len(m.Brokers) == 0 {
