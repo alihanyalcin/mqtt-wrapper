@@ -19,6 +19,7 @@ type MQTTConfig struct {
 	Password string
 	Topics []string
 	QoS int
+	Messages chan MQTT.Message
 
 	client MQTT.Client
 	options *MQTT.ClientOptions
@@ -51,7 +52,7 @@ func (m *MQTTConfig) CreateConnection() error {
 	if err != nil {
 		return err
 	}
-
+	
 	return nil
 }
 
@@ -77,6 +78,9 @@ func (m *MQTTConfig) connect() error {
 		if subscribeToken.Wait() && subscribeToken.Error() != nil {
 			return subscribeToken.Error()
 		}
+
+		// Create Channel for Subscribed Messages
+		m.Messages = make(chan  MQTT.Message)
 	}
 
 	return nil
@@ -121,5 +125,6 @@ func (m *MQTTConfig) onConnectionLost(c MQTT.Client, err error) {
 }
 
 func (m *MQTTConfig) onMessageReceived(c MQTT.Client, msg MQTT.Message) {
-	panic("not implemented")
+	// Send received msg to Messages channel
+	m.Messages <- msg
 }
