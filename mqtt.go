@@ -66,8 +66,11 @@ func (m *MQTTConfig) connect() error {
 	m.state = Connected
 
 	if len(m.Topics) != 0 {
-		var topics map[string]byte
+		topics := make(map[string]byte)
 		for _, topic := range m.Topics {
+			if topic == "" {
+				continue
+			}
 			topics[topic] = byte(m.QoS)
 		}
 		subscribeToken := m.client.SubscribeMultiple(topics, m.onMessageReceived)
@@ -77,6 +80,12 @@ func (m *MQTTConfig) connect() error {
 	}
 
 	return nil
+}
+
+func (m *MQTTConfig) Disconnect() {
+	m.client.Disconnect(0)
+	m.client = nil
+	m.state = Disconnected
 }
 
 func (m *MQTTConfig) createOptions() (*MQTT.ClientOptions, error) {
@@ -112,5 +121,5 @@ func (m *MQTTConfig) onConnectionLost(c MQTT.Client, err error) {
 }
 
 func (m *MQTTConfig) onMessageReceived(c MQTT.Client, msg MQTT.Message) {
-
+	panic("not implemented")
 }
