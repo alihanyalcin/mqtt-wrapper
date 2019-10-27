@@ -8,7 +8,7 @@ import (
 func TestSuccesfullConnection(t *testing.T) {
 	
 	client := MQTTConfig{
-		Brokers:  []string{"192.168.0.99:1883"},
+		Brokers:  []string{"tcp://192.168.0.99:1883"},
 		ClientID: "",
 		Username: "",
 		Password: "",
