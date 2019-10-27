@@ -19,6 +19,7 @@ type MQTTConfig struct {
 	Password string
 	Topics []string
 	QoS int
+	Messages chan MQTT.Message
 
 	client MQTT.Client
 	options *MQTT.ClientOptions
@@ -55,6 +56,25 @@ func (m *MQTTConfig) CreateConnection() error {
 	return nil
 }
 
+func (m *MQTTConfig) Disconnect() {
+	m.client.Disconnect(0)
+	m.client = nil
+	m.state = Disconnected
+}
+
+func (m *MQTTConfig) GetConnectionStatus() ConnectionState {
+	return m.state
+}
+
+func (m *MQTTConfig) Publish(topic string, payload interface{}) error {
+	token := m.client.Publish(topic, byte(m.QoS), false, payload)
+	token.Wait()
+	if token.Error() != nil {
+		return token.Error()
+	}
+	return nil
+}
+
 func (m *MQTTConfig) connect() error {
 	m.client = MQTT.NewClient(m.options)
 
@@ -66,14 +86,20 @@ func (m *MQTTConfig) connect() error {
 	m.state = Connected
 
 	if len(m.Topics) != 0 {
-		var topics map[string]byte
+		topics := make(map[string]byte)
 		for _, topic := range m.Topics {
+			if topic == "" {
+				continue
+			}
 			topics[topic] = byte(m.QoS)
 		}
 		subscribeToken := m.client.SubscribeMultiple(topics, m.onMessageReceived)
 		if subscribeToken.Wait() && subscribeToken.Error() != nil {
 			return subscribeToken.Error()
 		}
+
+		// Create Channel for Subscribed Messages
+		m.Messages = make(chan  MQTT.Message)
 	}
 
 	return nil
@@ -112,5 +138,6 @@ func (m *MQTTConfig) onConnectionLost(c MQTT.Client, err error) {
 }
 
 func (m *MQTTConfig) onMessageReceived(c MQTT.Client, msg MQTT.Message) {
-
+	// Send received msg to Messages channel
+	m.Messages <- msg
 }
