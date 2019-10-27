@@ -52,7 +52,7 @@ func (m *MQTTConfig) CreateConnection() error {
 	if err != nil {
 		return err
 	}
-	
+
 	return nil
 }
 
@@ -90,6 +90,10 @@ func (m *MQTTConfig) Disconnect() {
 	m.client.Disconnect(0)
 	m.client = nil
 	m.state = Disconnected
+}
+
+func (m *MQTTConfig) GetConnectionStatus() ConnectionState {
+	return m.state
 }
 
 func (m *MQTTConfig) createOptions() (*MQTT.ClientOptions, error) {
