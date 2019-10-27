@@ -56,6 +56,16 @@ func (m *MQTTConfig) CreateConnection() error {
 	return nil
 }
 
+func (m *MQTTConfig) Disconnect() {
+	m.client.Disconnect(0)
+	m.client = nil
+	m.state = Disconnected
+}
+
+func (m *MQTTConfig) GetConnectionStatus() ConnectionState {
+	return m.state
+}
+
 func (m *MQTTConfig) connect() error {
 	m.client = MQTT.NewClient(m.options)
 
@@ -84,16 +94,6 @@ func (m *MQTTConfig) connect() error {
 	}
 
 	return nil
-}
-
-func (m *MQTTConfig) Disconnect() {
-	m.client.Disconnect(0)
-	m.client = nil
-	m.state = Disconnected
-}
-
-func (m *MQTTConfig) GetConnectionStatus() ConnectionState {
-	return m.state
 }
 
 func (m *MQTTConfig) createOptions() (*MQTT.ClientOptions, error) {
