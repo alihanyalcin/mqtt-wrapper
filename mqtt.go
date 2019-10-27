@@ -66,6 +66,15 @@ func (m *MQTTConfig) GetConnectionStatus() ConnectionState {
 	return m.state
 }
 
+func (m *MQTTConfig) Publish(topic string, payload interface{}) error {
+	token := m.client.Publish(topic, byte(m.QoS), false, payload)
+	token.Wait()
+	if token.Error() != nil {
+		return token.Error()
+	}
+	return nil
+}
+
 func (m *MQTTConfig) connect() error {
 	m.client = MQTT.NewClient(m.options)
 
