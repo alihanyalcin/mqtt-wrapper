@@ -1,3 +1,6 @@
+/*
+Package mqtt-wrapper provides easy-to-use MQTT connection for home-made projects.
+ */
 package mqtt_wrapper
 
 import (
@@ -5,34 +8,34 @@ import (
 	MQTT "github.com/eclipse/paho.mqtt.golang"
 	"time"
 )
-
+// Connection state of the Client
 type ConnectionState int
 const (
-	Disconnected ConnectionState = iota
-	Connected
+	Disconnected ConnectionState = iota // No connection to broker
+	Connected // Connection established to broker
 )
-
+// MQTTConfig contains configurable options for connecting to broker(s).
 type MQTTConfig struct {
-	Brokers []string
-	ClientID string
-	Username string
-	Password string
-	Topics []string
-	QoS int
-	Messages chan MQTT.Message
+	Brokers []string // MQTT Broker address. Format: scheme://host:port
+	ClientID string // Client ID
+	Username string // Username to connect the broker(s)
+	Password string // Password to connect the broker(s)
+	Topics []string // Topics for subscription
+	QoS int // QoS
+	Messages chan MQTT.Message // Channel for received message
 
-	client MQTT.Client
+	client  MQTT.Client
 	options *MQTT.ClientOptions
-	state ConnectionState
+	state   ConnectionState
 }
-
+// CreateConnection will automatically create connection to broker(s) with MQTTConfig parameters.
 func (m *MQTTConfig) CreateConnection() error {
 
 	if m.client != nil {
 		return errors.New("mqtt client already initialized")
 	}
 
-	m.state =  Disconnected
+	m.state = Disconnected
 
 	if len(m.Brokers) == 0 {
 		return errors.New("no broker address to connect")
@@ -55,17 +58,17 @@ func (m *MQTTConfig) CreateConnection() error {
 
 	return nil
 }
-
+// Disconnect will close the connection to broker.
 func (m *MQTTConfig) Disconnect() {
 	m.client.Disconnect(0)
 	m.client = nil
 	m.state = Disconnected
 }
-
+// GetConnectionStatus returns the connection status: Connected or Disconnected
 func (m *MQTTConfig) GetConnectionStatus() ConnectionState {
 	return m.state
 }
-
+// Publish will send a message to broker with specific topic.
 func (m *MQTTConfig) Publish(topic string, payload interface{}) error {
 	token := m.client.Publish(topic, byte(m.QoS), false, payload)
 	token.Wait()
