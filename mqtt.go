@@ -22,6 +22,8 @@ type MQTTConfig struct {
 	Password string // Password to connect the broker(s)
 	Topics []string // Topics for subscription
 	QoS int // QoS
+	AutoReconnect bool // Reconnect if connection is lost
+	PersistentSession bool // Set session is persistent
 	Messages chan MQTT.Message // Channel for received message
 
 	client  MQTT.Client
@@ -56,6 +58,11 @@ func (m *MQTTConfig) CreateConnection() error {
 		return err
 	}
 
+	// Create Channel for Subscribed Messages
+	if len(m.Topics) != 0 && m.Messages == nil {
+		m.Messages = make(chan  MQTT.Message)
+	}
+
 	return nil
 }
 // Disconnect will close the connection to broker.
@@ -88,23 +95,6 @@ func (m *MQTTConfig) connect() error {
 
 	m.state = Connected
 
-	if len(m.Topics) != 0 {
-		topics := make(map[string]byte)
-		for _, topic := range m.Topics {
-			if topic == "" {
-				continue
-			}
-			topics[topic] = byte(m.QoS)
-		}
-		subscribeToken := m.client.SubscribeMultiple(topics, m.onMessageReceived)
-		if subscribeToken.Wait() && subscribeToken.Error() != nil {
-			return subscribeToken.Error()
-		}
-
-		// Create Channel for Subscribed Messages
-		m.Messages = make(chan  MQTT.Message)
-	}
-
 	return nil
 }
 
@@ -128,16 +118,30 @@ func (m *MQTTConfig) createOptions() (*MQTT.ClientOptions, error) {
 		options.SetPassword(m.Password)
 	}
 
-	options.SetAutoReconnect(false)
+	options.SetAutoReconnect(m.AutoReconnect)
 	options.SetKeepAlive(time.Second * 60)
-	options.SetCleanSession(true)
+	options.SetCleanSession(!m.PersistentSession)
 	options.SetConnectionLostHandler(m.onConnectionLost)
+	options.SetOnConnectHandler(m.onConnect)
 
 	return options, nil
 }
 
 func (m *MQTTConfig) onConnectionLost(c MQTT.Client, err error) {
 	m.state = Disconnected
+}
+
+func (m *MQTTConfig) onConnect(c MQTT.Client) {
+	if len(m.Topics) != 0 {
+		topics := make(map[string]byte)
+		for _, topic := range m.Topics {
+			if topic == "" {
+				continue
+			}
+			topics[topic] = byte(m.QoS)
+		}
+		m.client.SubscribeMultiple(topics, m.onMessageReceived)
+	}
 }
 
 func (m *MQTTConfig) onMessageReceived(c MQTT.Client, msg MQTT.Message) {
