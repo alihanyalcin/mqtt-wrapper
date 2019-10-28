@@ -23,6 +23,7 @@ type MQTTConfig struct {
 	Topics []string // Topics for subscription
 	QoS int // QoS
 	AutoReconnect bool // Reconnect if connection is lost
+	MaxReconnectInterval time.Duration // maximum time that will be waited between reconnection attempts
 	PersistentSession bool // Set session is persistent
 	Messages chan MQTT.Message // Channel for received message
 
@@ -116,6 +117,13 @@ func (m *MQTTConfig) createOptions() (*MQTT.ClientOptions, error) {
 
 	if m.Password != "" {
 		options.SetPassword(m.Password)
+	}
+
+	if m.AutoReconnect {
+		if m.MaxReconnectInterval == 0 {
+			m.MaxReconnectInterval = time.Minute * 10
+		}
+		options.MaxReconnectInterval = m.MaxReconnectInterval
 	}
 
 	options.SetAutoReconnect(m.AutoReconnect)
