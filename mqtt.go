@@ -1,6 +1,4 @@
-/*
-Package mqtt-wrapper provides easy-to-use MQTT connection for home-made projects.
- */
+// Package mqtt-wrapper provides easy-to-use MQTT connection for projects.
 package mqtt_wrapper
 
 import (
