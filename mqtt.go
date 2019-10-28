@@ -46,13 +46,9 @@ func (m *MQTTConfig) CreateConnection() error {
 		return errors.New("value of qos must be 0, 1, 2")
 	}
 
-	var err error
-	m.options, err = m.createOptions()
-	if err != nil {
-		return err
-	}
+	m.options = m.createOptions()
 
-	err = m.connect()
+	err := m.connect()
 	if err != nil {
 		return err
 	}
@@ -97,7 +93,7 @@ func (m *MQTTConfig) connect() error {
 	return nil
 }
 
-func (m *MQTTConfig) createOptions() (*MQTT.ClientOptions, error) {
+func (m *MQTTConfig) createOptions() *MQTT.ClientOptions {
 	options := MQTT.NewClientOptions()
 
 	for _, broker := range m.Brokers {
@@ -130,7 +126,7 @@ func (m *MQTTConfig) createOptions() (*MQTT.ClientOptions, error) {
 	options.SetConnectionLostHandler(m.onConnectionLost)
 	options.SetOnConnectHandler(m.onConnect)
 
-	return options, nil
+	return options
 }
 
 func (m *MQTTConfig) onConnectionLost(c MQTT.Client, err error) {
