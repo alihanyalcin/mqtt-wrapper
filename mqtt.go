@@ -2,8 +2,11 @@
 package mqtt_wrapper
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	MQTT "github.com/eclipse/paho.mqtt.golang"
+	"io/ioutil"
 	"time"
 )
 // Connection state of the Client
@@ -23,6 +26,9 @@ type MQTTConfig struct {
 	AutoReconnect bool // Reconnect if connection is lost
 	MaxReconnectInterval time.Duration // maximum time that will be waited between reconnection attempts
 	PersistentSession bool // Set session is persistent
+	TLSCA string // CA file path
+	TLSCert string // Cert file path
+	TLSKey string // Key file path
 	Messages chan MQTT.Message // Channel for received message
 
 	client  MQTT.Client
@@ -119,6 +125,8 @@ func (m *MQTTConfig) createOptions() *MQTT.ClientOptions {
 		}
 		options.SetMaxReconnectInterval(m.MaxReconnectInterval)
 	}
+	// TLS Config
+	
 
 	options.SetAutoReconnect(m.AutoReconnect)
 	options.SetKeepAlive(time.Second * 60)
@@ -127,6 +135,36 @@ func (m *MQTTConfig) createOptions() *MQTT.ClientOptions {
 	options.SetOnConnectHandler(m.onConnect)
 
 	return options
+}
+
+func (m *MQTTConfig) tlsConfig() (*tls.Config, error) {
+
+	tlsConfig := &tls.Config{}
+
+	if m.TLSCA != "" {
+		pool := x509.NewCertPool()
+		pem, err := ioutil.ReadFile(m.TLSCA)
+		if err != nil {
+			return nil, err
+		}
+		check := pool.AppendCertsFromPEM(pem)
+		if !check {
+			return nil, errors.New("certificate can not added to pool")
+		}
+		tlsConfig.RootCAs = pool
+		return tlsConfig, nil
+	}
+
+	if m.TLSCert != "" && m.TLSKey != "" {
+		cert, err := tls.LoadX509KeyPair(m.TLSCert, m.TLSKey)
+		if err != nil {
+			return nil, err
+		}
+		tlsConfig.Certificates = []tls.Certificate{cert}
+		tlsConfig.BuildNameToCertificate()
+		return tlsConfig, nil
+	}
+	return nil, nil
 }
 
 func (m *MQTTConfig) onConnectionLost(c MQTT.Client, err error) {
