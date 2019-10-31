@@ -117,7 +117,7 @@ func (m *MQTTConfig) createOptions() *MQTT.ClientOptions {
 		if m.MaxReconnectInterval == 0 {
 			m.MaxReconnectInterval = time.Minute * 10
 		}
-		options.MaxReconnectInterval = m.MaxReconnectInterval
+		options.SetMaxReconnectInterval(m.MaxReconnectInterval)
 	}
 
 	options.SetAutoReconnect(m.AutoReconnect)
