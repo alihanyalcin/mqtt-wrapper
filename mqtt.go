@@ -2,33 +2,43 @@
 package mqtt_wrapper
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	MQTT "github.com/eclipse/paho.mqtt.golang"
+	"io/ioutil"
 	"time"
 )
+
 // Connection state of the Client
 type ConnectionState int
+
 const (
 	Disconnected ConnectionState = iota // No connection to broker
-	Connected // Connection established to broker
+	Connected                           // Connection established to broker
 )
+
 // MQTTConfig contains configurable options for connecting to broker(s).
 type MQTTConfig struct {
-	Brokers []string // MQTT Broker address. Format: scheme://host:port
-	ClientID string // Client ID
-	Username string // Username to connect the broker(s)
-	Password string // Password to connect the broker(s)
-	Topics []string // Topics for subscription
-	QoS int // QoS
-	AutoReconnect bool // Reconnect if connection is lost
-	MaxReconnectInterval time.Duration // maximum time that will be waited between reconnection attempts
-	PersistentSession bool // Set session is persistent
-	Messages chan MQTT.Message // Channel for received message
+	Brokers              []string          // MQTT Broker address. Format: scheme://host:port
+	ClientID             string            // Client ID
+	Username             string            // Username to connect the broker(s)
+	Password             string            // Password to connect the broker(s)
+	Topics               []string          // Topics for subscription
+	QoS                  int               // QoS
+	AutoReconnect        bool              // Reconnect if connection is lost
+	MaxReconnectInterval time.Duration     // maximum time that will be waited between reconnection attempts
+	PersistentSession    bool              // Set session is persistent
+	TLSCA                string            // CA file path
+	TLSCert              string            // Cert file path
+	TLSKey               string            // Key file path
+	Messages             chan MQTT.Message // Channel for received message
 
 	client  MQTT.Client
 	options *MQTT.ClientOptions
 	state   ConnectionState
 }
+
 // CreateConnection will automatically create connection to broker(s) with MQTTConfig parameters.
 func (m *MQTTConfig) CreateConnection() error {
 
@@ -45,7 +55,6 @@ func (m *MQTTConfig) CreateConnection() error {
 	if m.QoS > 2 || m.QoS < 0 {
 		return errors.New("value of qos must be 0, 1, 2")
 	}
-
 	var err error
 	m.options, err = m.createOptions()
 	if err != nil {
@@ -59,21 +68,24 @@ func (m *MQTTConfig) CreateConnection() error {
 
 	// Create Channel for Subscribed Messages
 	if len(m.Topics) != 0 && m.Messages == nil {
-		m.Messages = make(chan  MQTT.Message)
+		m.Messages = make(chan MQTT.Message)
 	}
 
 	return nil
 }
+
 // Disconnect will close the connection to broker.
 func (m *MQTTConfig) Disconnect() {
 	m.client.Disconnect(0)
 	m.client = nil
 	m.state = Disconnected
 }
+
 // GetConnectionStatus returns the connection status: Connected or Disconnected
 func (m *MQTTConfig) GetConnectionStatus() ConnectionState {
 	return m.state
 }
+
 // Publish will send a message to broker with specific topic.
 func (m *MQTTConfig) Publish(topic string, payload interface{}) error {
 	token := m.client.Publish(topic, byte(m.QoS), false, payload)
@@ -121,7 +133,15 @@ func (m *MQTTConfig) createOptions() (*MQTT.ClientOptions, error) {
 		if m.MaxReconnectInterval == 0 {
 			m.MaxReconnectInterval = time.Minute * 10
 		}
-		options.MaxReconnectInterval = m.MaxReconnectInterval
+		options.SetMaxReconnectInterval(m.MaxReconnectInterval)
+	}
+	// TLS Config
+	if m.TLSCA != "" || (m.TLSKey != "" && m.TLSCert != "") {
+		tlsConf, err := m.tlsConfig()
+		if err != nil {
+			return nil, err
+		}
+		options.SetTLSConfig(tlsConf)
 	}
 
 	options.SetAutoReconnect(m.AutoReconnect)
@@ -131,6 +151,34 @@ func (m *MQTTConfig) createOptions() (*MQTT.ClientOptions, error) {
 	options.SetOnConnectHandler(m.onConnect)
 
 	return options, nil
+}
+
+func (m *MQTTConfig) tlsConfig() (*tls.Config, error) {
+
+	tlsConfig := &tls.Config{}
+
+	if m.TLSCA != "" {
+		pool := x509.NewCertPool()
+		pem, err := ioutil.ReadFile(m.TLSCA)
+		if err != nil {
+			return nil, err
+		}
+		check := pool.AppendCertsFromPEM(pem)
+		if !check {
+			return nil, errors.New("certificate can not added to pool")
+		}
+		tlsConfig.RootCAs = pool
+	}
+
+	if m.TLSCert != "" && m.TLSKey != "" {
+		cert, err := tls.LoadX509KeyPair(m.TLSCert, m.TLSKey)
+		if err != nil {
+			return nil, err
+		}
+		tlsConfig.Certificates = []tls.Certificate{cert}
+		tlsConfig.BuildNameToCertificate()
+	}
+	return tlsConfig, nil
 }
 
 func (m *MQTTConfig) onConnectionLost(c MQTT.Client, err error) {
