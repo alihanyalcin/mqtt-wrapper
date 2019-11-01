@@ -1,5 +1,5 @@
 # MQTT-Wrapper
-MQTT-Wrapper package provides easy-to-use MQTT connection for projects.
+MQTT-Wrapper package provides easy-to-use MQTT connection for GO projects.
 
 # Usage
 
