@@ -42,7 +42,7 @@ m.Disconnect()
 ````go
 err := m.Publish("topic","message")
 if err != nil {
-	fmt.Println(err)
+	fmt.Println(err.Error())
 }
 ````
 * Any message comes from the subscribed topic will send into _**Message**_ channel
