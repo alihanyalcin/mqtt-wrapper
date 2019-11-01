@@ -86,7 +86,7 @@ func (m *MQTTConfig) GetConnectionStatus() ConnectionState {
 	return m.state
 }
 
-// Publish will send a message to broker with specific topic.
+// Publish will send a message to broker with a specific topic.
 func (m *MQTTConfig) Publish(topic string, payload interface{}) error {
 	token := m.client.Publish(topic, byte(m.QoS), false, payload)
 	token.Wait()
