@@ -4,7 +4,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
-
+// Test succesfull connection
 func TestSuccesfullConnection(t *testing.T) {
 	
 	client := MQTTConfig{
@@ -21,7 +21,7 @@ func TestSuccesfullConnection(t *testing.T) {
 		t.Error("Error occurred:",err)
 	}
 }
-
+// Test multiple connection using same variable error
 func TestDoubleConnecion(t *testing.T) {
 	client := MQTTConfig{
 		Brokers:  []string{"192.168.0.99:1883"},
@@ -35,7 +35,7 @@ func TestDoubleConnecion(t *testing.T) {
 	err := client.CreateConnection()
 	assert.Equal(t,"mqtt client already initialized", err.Error())
 }
-
+// Test QoS only get 0,1,2
 func TestQoSValue(t *testing.T) {
 	client := MQTTConfig{
 		Brokers:  []string{"192.168.0.99:1883"},
@@ -60,7 +60,7 @@ func TestQoSValue(t *testing.T) {
 		client.Disconnect()
 	}
 }
-
+// Test empty topic will not recognized
 func TestSubscribe(t *testing.T) {
 	client := MQTTConfig{
 		Brokers:  []string{"192.168.0.99:1883"},
