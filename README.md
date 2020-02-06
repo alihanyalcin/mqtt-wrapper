@@ -1,3 +1,4 @@
+[![GoDoc](https://godoc.org/github.com/alihanyalcin/mqtt-wrapper?status.svg)](https://godoc.org/github.com/alihanyalcin/mqtt-wrapper)
 # MQTT-Wrapper
 MQTT-Wrapper package provides easy-to-use MQTT connection for GO projects.
 
