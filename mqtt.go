@@ -1,4 +1,4 @@
-// Package mqtt-wrapper provides easy-to-use MQTT connection for projects.
+// Package mqtt_wrapper provides easy-to-use MQTT connection for projects.
 package mqtt_wrapper
 
 import (
@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-// Connection state of the Client
+// ConnectionState of the Client
 type ConnectionState int
 
 const (
