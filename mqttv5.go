@@ -35,6 +35,7 @@ func newMQTTv5(config *MQTTConfig) (MQTT, error) {
 	return &m, nil
 }
 
+// Handle new messages
 func (m *mqttv5) Handle(f func(string, []byte)) {
 	go func() {
 		for {
@@ -48,6 +49,7 @@ func (m *mqttv5) Handle(f func(string, []byte)) {
 	}()
 }
 
+// Publish will send a message to broker with a specific topic.
 func (m *mqttv5) Publish(topic string, payload interface{}) error {
 	var publishPayload []byte
 	switch p := payload.(type) {
@@ -75,10 +77,12 @@ func (m *mqttv5) Publish(topic string, payload interface{}) error {
 	return nil
 }
 
+// GetConnectionStatus returns the connection status: Connected or Disconnected
 func (m *mqttv5) GetConnectionStatus() ConnectionState {
 	return m.state
 }
 
+// Disconnect will close the connection to broker.
 func (m *mqttv5) Disconnect() {
 	m.client.Disconnect(&paho.Disconnect{
 		ReasonCode: 0,
@@ -153,20 +157,20 @@ func (m *mqttv5) connect() error {
 
 func (m *mqttv5) createOptions() (*paho.Connect, error) {
 
-	if m.config.ClientID == "" {
-		m.config.ClientID = "mqttv5-client"
-	}
-
 	if m.config.TLSCA != "" || (m.config.TLSKey != "" && m.config.TLSCert != "") {
 		return nil, errors.New("TLS support is not available yet.")
+	}
+
+	if m.config.ClientID == "" {
+		m.config.ClientID = "mqttv5-client"
 	}
 
 	options := &paho.Connect{
 		ClientID:   m.config.ClientID,
 		Username:   m.config.Username,
 		Password:   []byte(m.config.Password),
-		KeepAlive:  60,
-		CleanStart: true, // CleanSession???
+		KeepAlive:  m.config.KeepAlive,
+		CleanStart: m.config.PersistentSession,
 	}
 
 	if m.config.Username != "" {

@@ -1,4 +1,3 @@
-// Package mqtt_wrapper provides easy-to-use MQTT connection for projects.
 package mqtt_wrapper
 
 import (
@@ -31,6 +30,7 @@ func newMQTTv3(config *MQTTConfig) (MQTT, error) {
 	return &m, nil
 }
 
+// Handle new messages
 func (m *mqttv3) Handle(f func(string, []byte)) {
 	go func() {
 		for {
@@ -121,7 +121,7 @@ func (m *mqttv3) createOptions() (*mqtt.ClientOptions, error) {
 	}
 
 	options.SetAutoReconnect(m.config.AutoReconnect)
-	options.SetKeepAlive(time.Second * 60)
+	options.SetKeepAlive(time.Second * time.Duration(m.config.KeepAlive))
 	options.SetCleanSession(!m.config.PersistentSession)
 	options.SetConnectionLostHandler(m.onConnectionLost)
 	options.SetOnConnectHandler(m.onConnect)

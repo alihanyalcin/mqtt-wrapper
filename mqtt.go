@@ -1,3 +1,4 @@
+// Package mqtt_wrapper provides easy-to-use MQTT connection for projects.
 package mqtt_wrapper
 
 import (
@@ -9,16 +10,21 @@ import (
 )
 
 type MQTT interface {
+	// Handle new messages
 	Handle(func(string, []byte))
+	// Publish will send a message to broker with a specific topic.
 	Publish(string, interface{}) error
+	// GetConnectionStatus returns the connection status: Connected or Disconnected
 	GetConnectionStatus() ConnectionState
+	// Disconnect will close the connection to broker.
 	Disconnect()
 }
 
-type Version int
+// MQTTVersion of the client
+type MQTTVersion int
 
 const (
-	V3 Version = iota
+	V3 MQTTVersion = iota
 	V5
 )
 
@@ -32,30 +38,25 @@ const (
 
 // MQTTConfig contains configurable options for connecting to broker(s).
 type MQTTConfig struct {
-	Brokers              []string // MQTT Broker address. Format: scheme://host:port
-	ClientID             string   // Client ID
-	Username             string   // Username to connect the broker(s)
-	Password             string   // Password to connect the broker(s)
-	Topics               []string // Topics for subscription
-	QoS                  int      // QoS
-	Retained             bool
+	Brokers              []string      // MQTT Broker address. Format: scheme://host:port
+	ClientID             string        // Client ID
+	Username             string        // Username to connect the broker(s)
+	Password             string        // Password to connect the broker(s)
+	Topics               []string      // Topics for subscription
+	QoS                  int           // QoS
+	Retained             bool          // Retain Message
 	AutoReconnect        bool          // Reconnect if connection is lost
-	MaxReconnectInterval time.Duration // maximum time that will be waited between reconnection attempts
-	PersistentSession    bool          // Set session is persistent
+	MaxReconnectInterval time.Duration // Maximum time that will be waited between reconnection attempts
+	PersistentSession    bool          // Set persistent(clean start for v5) of session
+	KeepAlive            uint16        // Keep Alive time in sec
 	TLSCA                string        // CA file path
 	TLSCert              string        // Cert file path
 	TLSKey               string        // Key file path
-	Version              Version
-
-	client MQTT
+	Version              MQTTVersion   // MQTT Version of client
 }
 
 // CreateConnection will automatically create connection to broker(s) with MQTTConfig parameters.
 func (m *MQTTConfig) CreateConnection() (MQTT, error) {
-
-	if m.client != nil {
-		return nil, errors.New("mqtt client already initialized")
-	}
 
 	if len(m.Brokers) == 0 {
 		return nil, errors.New("no broker address to connect")
@@ -72,16 +73,12 @@ func (m *MQTTConfig) CreateConnection() (MQTT, error) {
 			return nil, err
 		}
 
-		m.client = client
-
 		return client, nil
 	case V5:
 		client, err := newMQTTv5(m)
 		if err != nil {
 			return nil, err
 		}
-
-		m.client = client
 
 		return client, nil
 	}
