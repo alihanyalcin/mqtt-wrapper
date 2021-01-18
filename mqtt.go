@@ -76,7 +76,14 @@ func (m *MQTTConfig) CreateConnection() (MQTT, error) {
 
 		return client, nil
 	case V5:
-		panic("unimplemented")
+		client, err := newMQTTv5(m)
+		if err != nil {
+			return nil, err
+		}
+
+		m.client = client
+
+		return client, nil
 	}
 
 	return nil, nil
