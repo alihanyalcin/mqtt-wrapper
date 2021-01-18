@@ -9,6 +9,7 @@ import (
 )
 
 type MQTT interface {
+	Handle(func(string, []byte))
 	Publish(string, interface{}) error
 	GetConnectionStatus() ConnectionState
 	Disconnect()
@@ -31,12 +32,13 @@ const (
 
 // MQTTConfig contains configurable options for connecting to broker(s).
 type MQTTConfig struct {
-	Brokers              []string      // MQTT Broker address. Format: scheme://host:port
-	ClientID             string        // Client ID
-	Username             string        // Username to connect the broker(s)
-	Password             string        // Password to connect the broker(s)
-	Topics               []string      // Topics for subscription
-	QoS                  int           // QoS
+	Brokers              []string // MQTT Broker address. Format: scheme://host:port
+	ClientID             string   // Client ID
+	Username             string   // Username to connect the broker(s)
+	Password             string   // Password to connect the broker(s)
+	Topics               []string // Topics for subscription
+	QoS                  int      // QoS
+	Retained             bool
 	AutoReconnect        bool          // Reconnect if connection is lost
 	MaxReconnectInterval time.Duration // maximum time that will be waited between reconnection attempts
 	PersistentSession    bool          // Set session is persistent

@@ -8,17 +8,19 @@ import (
 )
 
 type MQTTv3 struct {
-	client   mqttv3.Client
-	state    ConnectionState
-	config   MQTTConfig
-	Messages chan mqttv3.Message
+	client     mqttv3.Client
+	state      ConnectionState
+	config     MQTTConfig
+	messages   chan mqttv3.Message
+	disconnect chan bool
 }
 
 func newMQTTv3(config *MQTTConfig) (MQTT, error) {
 	m := MQTTv3{
-		state:    Disconnected,
-		config:   *config,
-		Messages: make(chan mqttv3.Message),
+		state:      Disconnected,
+		config:     *config,
+		messages:   make(chan mqttv3.Message),
+		disconnect: make(chan bool, 1),
 	}
 
 	err := m.connect()
@@ -29,11 +31,27 @@ func newMQTTv3(config *MQTTConfig) (MQTT, error) {
 	return &m, nil
 }
 
-// Disconnect will close the connection to broker.
-func (m *MQTTv3) Disconnect() {
-	m.client.Disconnect(0)
-	m.client = nil
-	m.state = Disconnected
+func (m *MQTTv3) Handle(f func(string, []byte)) {
+	go func() {
+		for {
+			select {
+			case <-m.disconnect:
+				return
+			case msg := <-m.messages:
+				f(msg.Topic(), msg.Payload())
+			}
+		}
+	}()
+}
+
+// Publish will send a message to broker with a specific topic.
+func (m *MQTTv3) Publish(topic string, payload interface{}) error {
+	token := m.client.Publish(topic, byte(m.config.QoS), m.config.Retained, payload)
+	token.Wait()
+	if token.Error() != nil {
+		return token.Error()
+	}
+	return nil
 }
 
 // GetConnectionStatus returns the connection status: Connected or Disconnected
@@ -41,14 +59,12 @@ func (m *MQTTv3) GetConnectionStatus() ConnectionState {
 	return m.state
 }
 
-// Publish will send a message to broker with a specific topic.
-func (m *MQTTv3) Publish(topic string, payload interface{}) error {
-	token := m.client.Publish(topic, byte(m.config.QoS), false, payload)
-	token.Wait()
-	if token.Error() != nil {
-		return token.Error()
-	}
-	return nil
+// Disconnect will close the connection to broker.
+func (m *MQTTv3) Disconnect() {
+	m.client.Disconnect(0)
+	m.client = nil
+	m.state = Disconnected
+	m.disconnect <- true
 }
 
 func (m *MQTTv3) connect() error {
@@ -131,6 +147,6 @@ func (m *MQTTv3) onConnect(c mqttv3.Client) {
 }
 
 func (m *MQTTv3) onMessageReceived(c mqttv3.Client, msg mqttv3.Message) {
-	// Send received msg to Messages channel
-	m.Messages <- msg
+	// Send received msg to messages channel
+	m.messages <- msg
 }
