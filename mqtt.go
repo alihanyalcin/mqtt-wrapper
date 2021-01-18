@@ -89,13 +89,13 @@ func (m *MQTTConfig) CreateConnection() (MQTT, error) {
 	return nil, nil
 }
 
-func tlsConfig(config MQTTConfig) (*tls.Config, error) {
+func (m *MQTTConfig) tlsConfig() (*tls.Config, error) {
 
 	tlsConfig := &tls.Config{}
 
-	if config.TLSCA != "" {
+	if m.TLSCA != "" {
 		pool := x509.NewCertPool()
-		pem, err := ioutil.ReadFile(config.TLSCA)
+		pem, err := ioutil.ReadFile(m.TLSCA)
 		if err != nil {
 			return nil, err
 		}
@@ -106,8 +106,8 @@ func tlsConfig(config MQTTConfig) (*tls.Config, error) {
 		tlsConfig.RootCAs = pool
 	}
 
-	if config.TLSCert != "" && config.TLSKey != "" {
-		cert, err := tls.LoadX509KeyPair(config.TLSCert, config.TLSKey)
+	if m.TLSCert != "" && m.TLSKey != "" {
+		cert, err := tls.LoadX509KeyPair(m.TLSCert, m.TLSKey)
 		if err != nil {
 			return nil, err
 		}

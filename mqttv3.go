@@ -113,7 +113,7 @@ func (m *mqttv3) createOptions() (*mqtt.ClientOptions, error) {
 	}
 	// TLS Config
 	if m.config.TLSCA != "" || (m.config.TLSKey != "" && m.config.TLSCert != "") {
-		tlsConf, err := tlsConfig(m.config)
+		tlsConf, err := m.config.tlsConfig()
 		if err != nil {
 			return nil, err
 		}
