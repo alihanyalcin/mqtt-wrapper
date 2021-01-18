@@ -4,22 +4,22 @@ package mqtt_wrapper
 import (
 	"time"
 
-	mqttv3 "github.com/eclipse/paho.mqtt.golang"
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
-type MQTTv3 struct {
-	client     mqttv3.Client
+type mqttv3 struct {
+	client     mqtt.Client
 	state      ConnectionState
 	config     MQTTConfig
-	messages   chan mqttv3.Message
+	messages   chan mqtt.Message
 	disconnect chan bool
 }
 
 func newMQTTv3(config *MQTTConfig) (MQTT, error) {
-	m := MQTTv3{
+	m := mqttv3{
 		state:      Disconnected,
 		config:     *config,
-		messages:   make(chan mqttv3.Message),
+		messages:   make(chan mqtt.Message),
 		disconnect: make(chan bool, 1),
 	}
 
@@ -31,7 +31,7 @@ func newMQTTv3(config *MQTTConfig) (MQTT, error) {
 	return &m, nil
 }
 
-func (m *MQTTv3) Handle(f func(string, []byte)) {
+func (m *mqttv3) Handle(f func(string, []byte)) {
 	go func() {
 		for {
 			select {
@@ -45,7 +45,7 @@ func (m *MQTTv3) Handle(f func(string, []byte)) {
 }
 
 // Publish will send a message to broker with a specific topic.
-func (m *MQTTv3) Publish(topic string, payload interface{}) error {
+func (m *mqttv3) Publish(topic string, payload interface{}) error {
 	token := m.client.Publish(topic, byte(m.config.QoS), m.config.Retained, payload)
 	token.Wait()
 	if token.Error() != nil {
@@ -55,25 +55,25 @@ func (m *MQTTv3) Publish(topic string, payload interface{}) error {
 }
 
 // GetConnectionStatus returns the connection status: Connected or Disconnected
-func (m *MQTTv3) GetConnectionStatus() ConnectionState {
+func (m *mqttv3) GetConnectionStatus() ConnectionState {
 	return m.state
 }
 
 // Disconnect will close the connection to broker.
-func (m *MQTTv3) Disconnect() {
+func (m *mqttv3) Disconnect() {
 	m.client.Disconnect(0)
 	m.client = nil
 	m.state = Disconnected
 	m.disconnect <- true
 }
 
-func (m *MQTTv3) connect() error {
+func (m *mqttv3) connect() error {
 	options, err := m.createOptions()
 	if err != nil {
 		return err
 	}
 
-	m.client = mqttv3.NewClient(options)
+	m.client = mqtt.NewClient(options)
 
 	token := m.client.Connect()
 	if token.Wait() && token.Error() != nil {
@@ -85,8 +85,8 @@ func (m *MQTTv3) connect() error {
 	return nil
 }
 
-func (m *MQTTv3) createOptions() (*mqttv3.ClientOptions, error) {
-	options := mqttv3.NewClientOptions()
+func (m *mqttv3) createOptions() (*mqtt.ClientOptions, error) {
+	options := mqtt.NewClientOptions()
 
 	for _, broker := range m.config.Brokers {
 		options.AddBroker(broker)
@@ -129,11 +129,11 @@ func (m *MQTTv3) createOptions() (*mqttv3.ClientOptions, error) {
 	return options, nil
 }
 
-func (m *MQTTv3) onConnectionLost(c mqttv3.Client, err error) {
+func (m *mqttv3) onConnectionLost(c mqtt.Client, err error) {
 	m.state = Disconnected
 }
 
-func (m *MQTTv3) onConnect(c mqttv3.Client) {
+func (m *mqttv3) onConnect(c mqtt.Client) {
 	if len(m.config.Topics) != 0 {
 		topics := make(map[string]byte)
 		for _, topic := range m.config.Topics {
@@ -146,7 +146,7 @@ func (m *MQTTv3) onConnect(c mqttv3.Client) {
 	}
 }
 
-func (m *MQTTv3) onMessageReceived(c mqttv3.Client, msg mqttv3.Message) {
+func (m *mqttv3) onMessageReceived(c mqtt.Client, msg mqtt.Message) {
 	// Send received msg to messages channel
 	m.messages <- msg
 }
