@@ -9,11 +9,15 @@ import (
 	"time"
 )
 
+type handler func(topic string, payload []byte)
+
 type MQTT interface {
 	// Handle new messages
-	Handle(func(string, []byte))
-	// Publish will send a message to broker with a specific topic.
+	Handle(handler)
+	// Publish sends a message to broker with a specific topic.
 	Publish(string, interface{}) error
+	// Request sends a message to broker and waits for the response.
+	Request(string, interface{}, time.Duration, handler) error
 	// GetConnectionStatus returns the connection status: Connected or Disconnected
 	GetConnectionStatus() ConnectionState
 	// Disconnect will close the connection to broker.

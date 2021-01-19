@@ -31,14 +31,14 @@ func newMQTTv3(config *MQTTConfig) (MQTT, error) {
 }
 
 // Handle new messages
-func (m *mqttv3) Handle(f func(string, []byte)) {
+func (m *mqttv3) Handle(h handler) {
 	go func() {
 		for {
 			select {
 			case <-m.disconnect:
 				return
 			case msg := <-m.messages:
-				f(msg.Topic(), msg.Payload())
+				h(msg.Topic(), msg.Payload())
 			}
 		}
 	}()
@@ -52,6 +52,10 @@ func (m *mqttv3) Publish(topic string, payload interface{}) error {
 		return token.Error()
 	}
 	return nil
+}
+
+func (m *mqttv3) Request(topic string, payload interface{}, timeout time.Duration, h handler) error {
+	panic("unimplemented for mqttv3")
 }
 
 // GetConnectionStatus returns the connection status: Connected or Disconnected
