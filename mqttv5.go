@@ -20,6 +20,7 @@ type mqttv5 struct {
 	messages   chan *paho.Publish
 	disconnect chan bool
 	requests   map[string]chan *paho.Publish
+	responses  chan *paho.Publish
 	sync.Mutex
 }
 
@@ -30,6 +31,7 @@ func newMQTTv5(config *MQTTConfig) (MQTT, error) {
 		messages:   make(chan *paho.Publish),
 		disconnect: make(chan bool, 1),
 		requests:   make(map[string]chan *paho.Publish),
+		responses:  make(chan *paho.Publish),
 	}
 
 	err := m.connect()
@@ -95,7 +97,7 @@ func (m *mqttv5) Request(topic string, payload interface{}, timeout time.Duratio
 		Payload: p,
 	})
 	if err != nil {
-		return err
+		return errors.New(fmt.Sprintf("failed to request: %s", err))
 	}
 
 	select {
@@ -109,6 +111,59 @@ func (m *mqttv5) Request(topic string, payload interface{}, timeout time.Duratio
 		h(resp.Topic, resp.Payload)
 		return nil
 	}
+}
+
+func (m *mqttv5) ResponseSubscribe(topic string) error {
+	m.client.Router.RegisterHandler(topic, func(p *paho.Publish) {
+		if p.Properties != nil || p.Properties.CorrelationData != nil || p.Properties.ResponseTopic != "" {
+			m.responses <- p
+		}
+	})
+
+	_, err := m.client.Subscribe(context.Background(), &paho.Subscribe{
+		Subscriptions: map[string]paho.SubscribeOptions{
+			topic: {QoS: 1},
+		},
+	})
+	if err != nil {
+		return errors.New(fmt.Sprintf("response subscribe failed: %s", err))
+	}
+
+	return nil
+}
+
+func (m *mqttv5) SendResponse(responseTopic string, payload interface{}, id []byte) error {
+	p, err := m.checkPayload(payload)
+	if err != nil {
+		return err
+	}
+
+	_, err = m.client.Publish(context.Background(), &paho.Publish{
+		Properties: &paho.PublishProperties{
+			CorrelationData: id,
+		},
+		Topic:   responseTopic,
+		Payload: p,
+	})
+	if err != nil {
+		return errors.New(fmt.Sprintf("failed to respond: %s", err))
+	}
+
+	return nil
+}
+
+// Handle responses
+func (m *mqttv5) HandleResponse(h responseHandler) {
+	go func() {
+		for {
+			select {
+			case <-m.disconnect:
+				return
+			case resp := <-m.responses:
+				h(resp.Properties.ResponseTopic, resp.Payload, resp.Properties.CorrelationData)
+			}
+		}
+	}()
 }
 
 // GetConnectionStatus returns the connection status: Connected or Disconnected
@@ -137,12 +192,10 @@ func (m *mqttv5) connect() error {
 		log.Fatalf("Failed to connect to %s: %s", m.config.Brokers[0], err)
 	}
 
-	msg := make(chan *paho.Publish)
-
 	c := paho.NewClient()
 	c.Conn = conn
-	c.Router = paho.NewSingleHandlerRouter(func(m *paho.Publish) {
-		msg <- m
+	c.Router = paho.NewSingleHandlerRouter(func(p *paho.Publish) {
+		m.messages <- p
 	})
 
 	ca, err := c.Connect(context.Background(), options)
@@ -186,7 +239,19 @@ func (m *mqttv5) connect() error {
 	// subscribe for request/response
 	responseTopic := fmt.Sprintf("%s/responses", c.ClientID)
 
-	c.Router.RegisterHandler(responseTopic, m.responseHandler)
+	c.Router.RegisterHandler(responseTopic, func(p *paho.Publish) {
+		if p.Properties == nil || p.Properties.CorrelationData == nil {
+			return
+		}
+
+		response := m.getRequest(string(p.Properties.CorrelationData))
+		if response == nil {
+			return
+		}
+
+		response <- p
+	})
+
 	_, err = c.Subscribe(context.Background(), &paho.Subscribe{
 		Subscriptions: map[string]paho.SubscribeOptions{
 			responseTopic: {QoS: 1},
@@ -197,7 +262,6 @@ func (m *mqttv5) connect() error {
 	}
 
 	m.client = c
-	m.messages = msg
 	m.state = Connected
 
 	return nil
@@ -230,19 +294,6 @@ func (m *mqttv5) createOptions() (*paho.Connect, error) {
 	}
 
 	return options, nil
-}
-
-func (m *mqttv5) responseHandler(p *paho.Publish) {
-	if p.Properties == nil || p.Properties.CorrelationData == nil {
-		return
-	}
-
-	response := m.getRequest(string(p.Properties.CorrelationData))
-	if response == nil {
-		return
-	}
-
-	response <- p
 }
 
 func (m *mqttv5) checkPayload(payload interface{}) ([]byte, error) {

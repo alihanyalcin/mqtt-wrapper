@@ -58,6 +58,18 @@ func (m *mqttv3) Request(topic string, payload interface{}, timeout time.Duratio
 	panic("unimplemented for mqttv3")
 }
 
+func (m *mqttv3) ResponseSubscribe(topic string) error {
+	panic("unimplemented for mqttv3")
+}
+
+func (m *mqttv3) SendResponse(responseTopic string, payload interface{}, id []byte) error {
+	panic("unimplemented for mqttv3")
+}
+
+func (m *mqttv3) HandleResponse(h responseHandler) {
+	panic("unimplemented for mqttv3")
+}
+
 // GetConnectionStatus returns the connection status: Connected or Disconnected
 func (m *mqttv3) GetConnectionStatus() ConnectionState {
 	return m.state
