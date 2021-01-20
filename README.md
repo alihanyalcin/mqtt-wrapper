@@ -1,6 +1,8 @@
 [![GoDoc](https://godoc.org/github.com/alihanyalcin/mqtt-wrapper?status.svg)](https://godoc.org/github.com/alihanyalcin/mqtt-wrapper)
 # MQTT-Wrapper
-MQTT-Wrapper package provides easy-to-use MQTT connection for GO projects.
+MQTT-Wrapper package provides easy-to-use **MQTTv3** and **MQTTv5** connection for Go projects.
+
+It supports **Request/Response** pattern for **MQTTv5** connection.
 
 # Usage
 
@@ -12,49 +14,47 @@ import(
 ```
 * Create a local variable using MQTTConfig struct and fill the necessary fields for the connection.
 ```go
-m := mqtt.MQTTConfig{
-		Brokers:              []string{"192.168.0.99:1883"},
-		ClientID:             "mqtt-client",
-		Username:             "",
-		Password:             "",
-		Topics:               []string{"topic"},
-		QoS:                  0,
-		AutoReconnect:        false,
-		MaxReconnectInterval: 0,
-		PersistentSession:    false,
-		TLSCA:                "",
-		TLSCert:              "",
-		TLSKey:               "",
-		Messages:             nil,
+config := mqtt.Config{
+    Brokers:              []string{"127.0.0.1:1883"},
+    ClientID:             "",
+    Username:             "",
+    Password:             "",
+    Topics:               []string{"topic"},
+    QoS:                  0,
+    Retained:             false,
+    AutoReconnect:        false,
+    MaxReconnectInterval: 5,
+    PersistentSession:    false,
+    KeepAlive:            15,
+    TLSCA:                "",
+    TLSCert:              "",
+    TLSKey:               "",
+    Version:              mqtt.V3, // use mqtt.V5 to use MQTTv5 client.
 }
 ```
 * Then, create a connection to MQTT broker(s).
 ````go
-err := m.CreateConnection()
+client, err := config.CreateConnection()
 if err != nil {
-    fmt.Println(err.Error())
+    log.Fatal(err)
 }
 ````
 * To disconnect from broker(s)
 ````go
-m.Disconnect()
+client.Disconnect()
 ````
 * To publish a message to broker(s) with a specific topic
 ````go
-err := m.Publish("topic","message")
+err = client.Publish("topic", "message")
 if err != nil {
-	fmt.Println(err.Error())
+    log.Fatal(err)
 }
 ````
-* Any message comes from the subscribed topic will send into _**Message**_ channel
+* To handle new messages
 ````go
-msg := <- m.Messages
-fmt.Println("Topic :",msg.Topic(), "Message :",string(msg.Payload()))
+client.Handle(func(topic string, payload []byte) {
+    log.Printf("Received on [%s]: '%s'", topic, string(payload))
+})
 ````
 
-# References
-Project | Link
------------- | -------------
-Eclipse Paho MQTT Go client | https://github.com/eclipse/paho.mqtt.golang
-Telegraf MQTT Consumer Input Plugin | https://github.com/influxdata/telegraf/tree/master/plugins/inputs/mqtt_consumer
-EdgeX Device MQTT Go | https://github.com/edgexfoundry/device-mqtt-go
+Check [examples](https://github.com/alihanyalcin/mqtt-wrapper/tree/master/examples) for more information about MQTTv5 client.
