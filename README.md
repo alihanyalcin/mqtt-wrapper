@@ -1,4 +1,5 @@
 [![GoDoc](https://godoc.org/github.com/alihanyalcin/mqtt-wrapper?status.svg)](https://godoc.org/github.com/alihanyalcin/mqtt-wrapper)
+[![Go Report Card](https://goreportcard.com/badge/github.com/alihanyalcin/mqtt-wrapper)](https://goreportcard.com/report/github.com/alihanyalcin/mqtt-wrapper)
 # MQTT-Wrapper
 MQTT-Wrapper package provides easy-to-use **MQTTv3** and **MQTTv5** connection for Go projects.
 
