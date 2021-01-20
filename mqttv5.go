@@ -115,7 +115,7 @@ func (m *mqttv5) Request(topic string, payload interface{}, timeout time.Duratio
 
 func (m *mqttv5) SubscribeResponse(topic string) error {
 	m.client.Router.RegisterHandler(topic, func(p *paho.Publish) {
-		if p.Properties != nil || p.Properties.CorrelationData != nil || p.Properties.ResponseTopic != "" {
+		if p.Properties != nil && p.Properties.CorrelationData != nil && p.Properties.ResponseTopic != "" {
 			m.responses <- p
 		}
 	})
