@@ -18,9 +18,10 @@ type mqttv5 struct {
 	state      ConnectionState
 	config     MQTTConfig
 	messages   chan *paho.Publish
-	disconnect chan bool
 	requests   map[string]chan *paho.Publish
 	responses  chan *paho.Publish
+	disconnect chan bool
+
 	sync.Mutex
 }
 
@@ -42,7 +43,7 @@ func newMQTTv5(config *MQTTConfig) (MQTT, error) {
 	return &m, nil
 }
 
-// Handle new messages
+// Handle handles new messages to subscribed topics.
 func (m *mqttv5) Handle(h handler) {
 	go func() {
 		for {
@@ -77,6 +78,7 @@ func (m *mqttv5) Publish(topic string, payload interface{}) error {
 	return nil
 }
 
+// Request sends a message to broker and waits for the response.
 func (m *mqttv5) Request(topic string, payload interface{}, timeout time.Duration, h handler) error {
 	p, err := m.checkPayload(payload)
 	if err != nil {
@@ -111,6 +113,7 @@ func (m *mqttv5) Request(topic string, payload interface{}, timeout time.Duratio
 	}
 }
 
+// SubscribeResponse creates new subscription for response topic.
 func (m *mqttv5) SubscribeResponse(topic string) error {
 	m.client.Router.RegisterHandler(topic, func(p *paho.Publish) {
 		if p.Properties != nil && p.Properties.CorrelationData != nil && p.Properties.ResponseTopic != "" {
@@ -130,6 +133,7 @@ func (m *mqttv5) SubscribeResponse(topic string) error {
 	return nil
 }
 
+// Respond sends message to response topic with correlation id (use inside HandleRequest).
 func (m *mqttv5) Respond(responseTopic string, payload interface{}, id []byte) error {
 	p, err := m.checkPayload(payload)
 	if err != nil {
@@ -150,8 +154,8 @@ func (m *mqttv5) Respond(responseTopic string, payload interface{}, id []byte) e
 	return nil
 }
 
-// Handle responses
-func (m *mqttv5) HandleResponse(h responseHandler) {
+// HandleRequest handles imcoming request.
+func (m *mqttv5) HandleRequest(h responseHandler) {
 	go func() {
 		for {
 			select {

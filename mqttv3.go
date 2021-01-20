@@ -30,7 +30,7 @@ func newMQTTv3(config *MQTTConfig) (MQTT, error) {
 	return &m, nil
 }
 
-// Handle new messages
+// Handle handles new messages to subscribed topics.
 func (m *mqttv3) Handle(h handler) {
 	go func() {
 		for {
@@ -54,20 +54,24 @@ func (m *mqttv3) Publish(topic string, payload interface{}) error {
 	return nil
 }
 
+// Request sends a message to broker and waits for the response.
 func (m *mqttv3) Request(topic string, payload interface{}, timeout time.Duration, h handler) error {
 	panic("unimplemented for mqttv3")
 }
 
+// SubscribeResponse creates new subscription for response topic.
 func (m *mqttv3) SubscribeResponse(topic string) error {
-	panic("unimplemented for mqttv3")
+	panic("not implemented for mqttv3")
 }
 
+// Respond sends message to response topic with correlation id (use inside HandleRequest).
 func (m *mqttv3) Respond(responseTopic string, payload interface{}, id []byte) error {
-	panic("unimplemented for mqttv3")
+	panic("not implemented for mqttv3")
 }
 
-func (m *mqttv3) HandleResponse(h responseHandler) {
-	panic("unimplemented for mqttv3")
+// HandleRequest handles imcoming request.
+func (m *mqttv3) HandleRequest(h responseHandler) {
+	panic("not implemented for mqttv3")
 }
 
 // GetConnectionStatus returns the connection status: Connected or Disconnected

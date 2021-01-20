@@ -44,7 +44,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	client.HandleResponse(func(responseTopic string, payload []byte, id []byte) {
+	client.HandleRequest(func(responseTopic string, payload []byte, id []byte) {
 		log.Printf("Received on [%s]: '%s'\n", responseTopic, payload)
 
 		client.Respond(responseTopic, msg, id)

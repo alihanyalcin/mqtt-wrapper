@@ -13,15 +13,18 @@ type handler func(topic string, payload []byte)
 type responseHandler func(responseTopic string, payload []byte, id []byte)
 
 type MQTT interface {
-	// Handle new messages
+	// Handle handles new messages to subscribed topics.
 	Handle(handler)
 	// Publish sends a message to broker with a specific topic.
 	Publish(string, interface{}) error
 	// Request sends a message to broker and waits for the response.
 	Request(string, interface{}, time.Duration, handler) error
+	// SubscribeResponse creates new subscription for response topic.
 	SubscribeResponse(string) error
+	// Respond sends message to response topic with correlation id (use inside HandleRequest).
 	Respond(string, interface{}, []byte) error
-	HandleResponse(responseHandler)
+	// HandleRequest handles imcoming request.
+	HandleRequest(responseHandler)
 	// GetConnectionStatus returns the connection status: Connected or Disconnected
 	GetConnectionStatus() ConnectionState
 	// Disconnect will close the connection to broker.
