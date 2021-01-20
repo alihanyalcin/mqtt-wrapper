@@ -102,10 +102,8 @@ func (m *mqttv5) Request(topic string, payload interface{}, timeout time.Duratio
 
 	select {
 	case <-time.After(timeout):
-		resp := m.getRequest(correlationID)
-		if resp != nil {
-			close(resp)
-		}
+		_ = m.getRequest(correlationID)
+
 		return errors.New("request timeout")
 	case resp := <-response:
 		h(resp.Topic, resp.Payload)
@@ -328,10 +326,10 @@ func (m *mqttv5) getRequest(id string) chan *paho.Publish {
 	defer m.Unlock()
 
 	response, ok := m.requests[id]
-	if ok {
-		delete(m.requests, id)
-
-		return response
+	if !ok {
+		return nil
 	}
-	return nil
+	delete(m.requests, id)
+
+	return response
 }
