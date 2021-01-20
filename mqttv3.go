@@ -58,11 +58,11 @@ func (m *mqttv3) Request(topic string, payload interface{}, timeout time.Duratio
 	panic("unimplemented for mqttv3")
 }
 
-func (m *mqttv3) ResponseSubscribe(topic string) error {
+func (m *mqttv3) SubscribeResponse(topic string) error {
 	panic("unimplemented for mqttv3")
 }
 
-func (m *mqttv3) SendResponse(responseTopic string, payload interface{}, id []byte) error {
+func (m *mqttv3) Respond(responseTopic string, payload interface{}, id []byte) error {
 	panic("unimplemented for mqttv3")
 }
 

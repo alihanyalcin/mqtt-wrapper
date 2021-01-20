@@ -19,8 +19,8 @@ type MQTT interface {
 	Publish(string, interface{}) error
 	// Request sends a message to broker and waits for the response.
 	Request(string, interface{}, time.Duration, handler) error
-	ResponseSubscribe(string) error
-	SendResponse(string, interface{}, []byte) error
+	SubscribeResponse(string) error
+	Respond(string, interface{}, []byte) error
 	HandleResponse(responseHandler)
 	// GetConnectionStatus returns the connection status: Connected or Disconnected
 	GetConnectionStatus() ConnectionState

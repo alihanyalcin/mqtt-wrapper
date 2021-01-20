@@ -113,7 +113,7 @@ func (m *mqttv5) Request(topic string, payload interface{}, timeout time.Duratio
 	}
 }
 
-func (m *mqttv5) ResponseSubscribe(topic string) error {
+func (m *mqttv5) SubscribeResponse(topic string) error {
 	m.client.Router.RegisterHandler(topic, func(p *paho.Publish) {
 		if p.Properties != nil || p.Properties.CorrelationData != nil || p.Properties.ResponseTopic != "" {
 			m.responses <- p
@@ -132,7 +132,7 @@ func (m *mqttv5) ResponseSubscribe(topic string) error {
 	return nil
 }
 
-func (m *mqttv5) SendResponse(responseTopic string, payload interface{}, id []byte) error {
+func (m *mqttv5) Respond(responseTopic string, payload interface{}, id []byte) error {
 	p, err := m.checkPayload(payload)
 	if err != nil {
 		return err
