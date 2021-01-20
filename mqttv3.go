@@ -1,4 +1,4 @@
-package mqtt_wrapper
+package mqtt
 
 import (
 	"time"
@@ -9,12 +9,12 @@ import (
 type mqttv3 struct {
 	client     mqtt.Client
 	state      ConnectionState
-	config     MQTTConfig
+	config     Config
 	messages   chan mqtt.Message
 	disconnect chan bool
 }
 
-func newMQTTv3(config *MQTTConfig) (MQTT, error) {
+func newMQTTv3(config *Config) (MQTT, error) {
 	m := mqttv3{
 		state:      Disconnected,
 		config:     *config,

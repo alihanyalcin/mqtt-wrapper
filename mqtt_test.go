@@ -1,4 +1,4 @@
-package mqtt_wrapper
+package mqtt
 
 import (
 	"testing"
@@ -9,7 +9,7 @@ import (
 // Test succesfull connection
 func TestSuccesfullConnection(t *testing.T) {
 
-	config := MQTTConfig{
+	config := Config{
 		Brokers:  []string{"127.0.0.1:1883"},
 		ClientID: "",
 		Username: "",
@@ -26,7 +26,7 @@ func TestSuccesfullConnection(t *testing.T) {
 
 // Test QoS only get 0,1,2
 func TestQoSValue(t *testing.T) {
-	config := MQTTConfig{
+	config := Config{
 		Brokers:  []string{"127.0.0.1:1883"},
 		ClientID: "",
 		Username: "",
@@ -46,7 +46,7 @@ func TestQoSValue(t *testing.T) {
 
 // Test empty topic will not recognized
 func TestSubscribe(t *testing.T) {
-	config := MQTTConfig{
+	config := Config{
 		Brokers:  []string{"127.0.0.1:1883"},
 		ClientID: "",
 		Username: "",
@@ -59,7 +59,7 @@ func TestSubscribe(t *testing.T) {
 }
 
 func TestPublish(t *testing.T) {
-	config := MQTTConfig{
+	config := Config{
 		Brokers:  []string{"127.0.0.1:1883"},
 		ClientID: "",
 		Username: "",

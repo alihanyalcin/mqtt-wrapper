@@ -28,7 +28,7 @@ func main() {
 
 	topic := args[0]
 
-	config := mqtt.MQTTConfig{
+	config := mqtt.Config{
 		Brokers:  []string{*server},
 		ClientID: "mqtt-subscibe",
 		Topics:   []string{topic},

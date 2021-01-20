@@ -26,7 +26,7 @@ func main() {
 		showUsage(1)
 	}
 
-	config := mqtt.MQTTConfig{
+	config := mqtt.Config{
 		Brokers:  []string{*server},
 		ClientID: "mqtt-response",
 		Version:  mqtt.V5,

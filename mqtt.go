@@ -1,5 +1,5 @@
-// Package mqtt_wrapper provides easy-to-use MQTT connection for projects.
-package mqtt_wrapper
+// Package mqtt provides easy-to-use MQTT connection for projects.
+package mqtt
 
 import (
 	"crypto/tls"
@@ -12,6 +12,7 @@ import (
 type handler func(topic string, payload []byte)
 type responseHandler func(responseTopic string, payload []byte, id []byte)
 
+// MQTT is an interface for mqttv3 and mqttv5 structs.
 type MQTT interface {
 	// Handle handles new messages to subscribed topics.
 	Handle(handler)
@@ -31,11 +32,13 @@ type MQTT interface {
 	Disconnect()
 }
 
-// MQTTVersion of the client
-type MQTTVersion int
+// Version of the client
+type Version int
 
 const (
-	V3 MQTTVersion = iota
+	// V3 is MQTT Version 3
+	V3 Version = iota
+	// V5 is MQTT Version 5
 	V5
 )
 
@@ -43,12 +46,14 @@ const (
 type ConnectionState int
 
 const (
-	Disconnected ConnectionState = iota // No connection to broker
-	Connected                           // Connection established to broker
+	// Disconnected : no connection to broker
+	Disconnected ConnectionState = iota
+	// Connected : connection established to broker
+	Connected
 )
 
-// MQTTConfig contains configurable options for connecting to broker(s).
-type MQTTConfig struct {
+// Config contains configurable options for connecting to broker(s).
+type Config struct {
 	Brokers              []string      // MQTT Broker address. Format: scheme://host:port
 	ClientID             string        // Client ID
 	Username             string        // Username to connect the broker(s)
@@ -63,11 +68,11 @@ type MQTTConfig struct {
 	TLSCA                string        // CA file path
 	TLSCert              string        // Cert file path
 	TLSKey               string        // Key file path
-	Version              MQTTVersion   // MQTT Version of client
+	Version              Version       // MQTT Version of client
 }
 
 // CreateConnection will automatically create connection to broker(s) with MQTTConfig parameters.
-func (m *MQTTConfig) CreateConnection() (MQTT, error) {
+func (m *Config) CreateConnection() (MQTT, error) {
 
 	if len(m.Brokers) == 0 {
 		return nil, errors.New("no broker address to connect")
@@ -97,7 +102,7 @@ func (m *MQTTConfig) CreateConnection() (MQTT, error) {
 	return nil, nil
 }
 
-func (m *MQTTConfig) tlsConfig() (*tls.Config, error) {
+func (m *Config) tlsConfig() (*tls.Config, error) {
 
 	tlsConfig := &tls.Config{}
 

@@ -1,4 +1,4 @@
-package mqtt_wrapper
+package mqtt
 
 import (
 	"bytes"
@@ -16,7 +16,7 @@ import (
 type mqttv5 struct {
 	client     *paho.Client
 	state      ConnectionState
-	config     MQTTConfig
+	config     Config
 	messages   chan *paho.Publish
 	requests   map[string]chan *paho.Publish
 	responses  chan *paho.Publish
@@ -25,7 +25,7 @@ type mqttv5 struct {
 	sync.Mutex
 }
 
-func newMQTTv5(config *MQTTConfig) (MQTT, error) {
+func newMQTTv5(config *Config) (MQTT, error) {
 	m := mqttv5{
 		state:      Disconnected,
 		config:     *config,
@@ -99,7 +99,7 @@ func (m *mqttv5) Request(topic string, payload interface{}, timeout time.Duratio
 		Payload: p,
 	})
 	if err != nil {
-		return errors.New(fmt.Sprintf("failed to request: %s", err))
+		return fmt.Errorf("failed to request: %v", err)
 	}
 
 	select {
@@ -127,7 +127,7 @@ func (m *mqttv5) SubscribeResponse(topic string) error {
 		},
 	})
 	if err != nil {
-		return errors.New(fmt.Sprintf("response subscribe failed: %s", err))
+		return fmt.Errorf("response subscribe failed: %v", err)
 	}
 
 	return nil
@@ -148,7 +148,7 @@ func (m *mqttv5) Respond(responseTopic string, payload interface{}, id []byte) e
 		Payload: p,
 	})
 	if err != nil {
-		return errors.New(fmt.Sprintf("failed to respond: %s", err))
+		return fmt.Errorf("failed to respond: %v", err)
 	}
 
 	return nil
@@ -204,12 +204,11 @@ func (m *mqttv5) connect() error {
 	}
 
 	if ca.ReasonCode != 0 {
-		return errors.New(
-			fmt.Sprintf("Failed to connect to %s : %d - %s",
-				m.config.Brokers[0],
-				ca.ReasonCode,
-				ca.Properties.ReasonString),
-		)
+		return fmt.Errorf("Failed to connect to %s : %d - %s",
+			m.config.Brokers[0],
+			ca.ReasonCode,
+			ca.Properties.ReasonString)
+
 	}
 
 	// subscribe topics
@@ -237,7 +236,7 @@ func (m *mqttv5) connect() error {
 		}
 
 		if sa.Reasons[0] != byte(m.config.QoS) {
-			return errors.New(fmt.Sprintf("Failed to subscribe: %d", sa.Reasons[0]))
+			return fmt.Errorf("Failed to subscribe: %d", sa.Reasons[0])
 		}
 	}
 
