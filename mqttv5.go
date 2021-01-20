@@ -194,9 +194,7 @@ func (m *mqttv5) connect() error {
 
 	c := paho.NewClient()
 	c.Conn = conn
-	c.Router = paho.NewSingleHandlerRouter(func(p *paho.Publish) {
-		m.messages <- p
-	})
+	c.Router = paho.NewStandardRouter()
 
 	ca, err := c.Connect(context.Background(), options)
 	if err != nil {
@@ -214,6 +212,7 @@ func (m *mqttv5) connect() error {
 
 	// subscribe topics
 	if len(m.config.Topics) != 0 {
+
 		topics := make(map[string]paho.SubscribeOptions)
 		for _, t := range m.config.Topics {
 			if t == "" {
@@ -222,6 +221,10 @@ func (m *mqttv5) connect() error {
 			topics[t] = paho.SubscribeOptions{
 				QoS: byte(m.config.QoS),
 			}
+
+			c.Router.RegisterHandler(t, func(p *paho.Publish) {
+				m.messages <- p
+			})
 		}
 		sa, err := c.Subscribe(context.Background(), &paho.Subscribe{
 			Subscriptions: topics,
@@ -275,6 +278,10 @@ func (m *mqttv5) createOptions() (*paho.Connect, error) {
 
 	if m.config.ClientID == "" {
 		m.config.ClientID = "mqttv5-client"
+	}
+
+	if m.config.KeepAlive == 0 {
+		m.config.KeepAlive = 30
 	}
 
 	options := &paho.Connect{
