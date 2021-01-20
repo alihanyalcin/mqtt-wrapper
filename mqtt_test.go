@@ -24,21 +24,6 @@ func TestSuccesfullConnection(t *testing.T) {
 	}
 }
 
-// Test multiple connection using same variable error
-func TestDoubleConnecion(t *testing.T) {
-	config := MQTTConfig{
-		Brokers:  []string{"127.0.0.1:1883"},
-		ClientID: "",
-		Username: "",
-		Password: "",
-		Topics:   nil,
-		QoS:      0,
-	}
-	_, _ = config.CreateConnection()
-	_, err := config.CreateConnection()
-	assert.Equal(t, "mqtt client already initialized", err.Error())
-}
-
 // Test QoS only get 0,1,2
 func TestQoSValue(t *testing.T) {
 	config := MQTTConfig{
