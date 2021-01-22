@@ -30,7 +30,7 @@ config := mqtt.Config{
     TLSCA:                "",
     TLSCert:              "",
     TLSKey:               "",
-    Version:              mqtt.V3, // use mqtt.V5 to use MQTTv5 client.
+    Version:              mqtt.V3, // use mqtt.V5 for MQTTv5 client.
 }
 ```
 * Then, create a connection to MQTT broker(s).
