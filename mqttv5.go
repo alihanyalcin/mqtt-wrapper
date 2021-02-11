@@ -3,10 +3,13 @@ package mqtt
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
-	"log"
 	"net"
+	"net/url"
+	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -21,6 +24,7 @@ type mqttv5 struct {
 	requests   map[string]chan *paho.Publish
 	responses  chan *paho.Publish
 	disconnect chan bool
+	brokers    []*url.URL
 
 	sync.Mutex
 }
@@ -189,26 +193,34 @@ func (m *mqttv5) connect() error {
 		return err
 	}
 
-	conn, err := net.Dial("tcp", m.config.Brokers[0])
-	if err != nil {
-		log.Fatalf("Failed to connect to %s: %s", m.config.Brokers[0], err)
-	}
-
+	var conn net.Conn
 	c := paho.NewClient()
-	c.Conn = conn
-	c.Router = paho.NewStandardRouter()
+	for _, broker := range m.brokers {
+		conn, err = m.openConnection(broker)
+		if err != nil {
+			continue
+		}
 
-	ca, err := c.Connect(context.Background(), options)
-	if err != nil {
-		return err
+		c.Conn = conn
+		c.Router = paho.NewStandardRouter()
+		ca, err := c.Connect(context.Background(), options)
+		if err != nil {
+			continue
+		}
+
+		if ca.ReasonCode == 0 {
+			// connected
+			break
+		}
+
+		if conn != nil {
+			c.Conn = nil
+			conn.Close()
+		}
 	}
 
-	if ca.ReasonCode != 0 {
-		return fmt.Errorf("Failed to connect to %s : %d - %s",
-			m.config.Brokers[0],
-			ca.ReasonCode,
-			ca.Properties.ReasonString)
-
+	if c.Conn == nil {
+		return fmt.Errorf("Failed to connect to %s :", m.brokers)
 	}
 
 	// subscribe topics
@@ -271,10 +283,46 @@ func (m *mqttv5) connect() error {
 	return nil
 }
 
+func (m *mqttv5) openConnection(uri *url.URL) (net.Conn, error) {
+	switch uri.Scheme {
+	case "mqtt", "tcp":
+		conn, err := net.DialTimeout("tcp", uri.Host, time.Second*30)
+		if err != nil {
+			return nil, err
+		}
+		return conn, nil
+	case "ssl", "tls", "mqtts", "mqtt+ssl", "tcps":
+		tlsConf, err := m.config.tlsConfig()
+		if err != nil {
+			return nil, err
+		}
+
+		conn, err := tls.DialWithDialer(&net.Dialer{Timeout: time.Second * 30}, "tcp", uri.Host, tlsConf)
+		if err != nil {
+			return nil, err
+		}
+		return conn, nil
+	}
+
+	return nil, errors.New("other protocols not implemented yet.")
+}
+
 func (m *mqttv5) createOptions() (*paho.Connect, error) {
 
-	if m.config.TLSCA != "" || (m.config.TLSKey != "" && m.config.TLSCert != "") {
-		return nil, errors.New("TLS support is not available yet.")
+	for _, broker := range m.config.Brokers {
+		re := regexp.MustCompile(`%(25)?`)
+		if len(broker) > 0 && broker[0] == ':' {
+			broker = "127.0.0.1" + broker
+		}
+		if !strings.Contains(broker, "://") {
+			broker = "tcp://" + broker
+		}
+		broker = re.ReplaceAllLiteralString(broker, "%25")
+		brokerURI, err := url.Parse(broker)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to parse %q broker address: %s", broker, err)
+		}
+		m.brokers = append(m.brokers, brokerURI)
 	}
 
 	if m.config.ClientID == "" {
