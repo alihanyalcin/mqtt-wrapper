@@ -59,6 +59,12 @@ func (m *mqttv3) Request(topic string, payload interface{}, timeout time.Duratio
 	panic("unimplemented for mqttv3")
 }
 
+// RequestWith sends a message to broker with specific response topic,
+// and waits for the response.
+func (m *mqttv3) RequestWith(topic, responseTopic string, payload interface{}, timeout time.Duration, h handler) error {
+	panic("unimplemented for mqttv3")
+}
+
 // SubscribeResponse creates new subscription for response topic.
 func (m *mqttv3) SubscribeResponse(topic string) error {
 	panic("not implemented for mqttv3")

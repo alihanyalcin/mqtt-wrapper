@@ -84,37 +84,13 @@ func (m *mqttv5) Publish(topic string, payload interface{}) error {
 
 // Request sends a message to broker and waits for the response.
 func (m *mqttv5) Request(topic string, payload interface{}, timeout time.Duration, h handler) error {
-	p, err := m.checkPayload(payload)
-	if err != nil {
-		return err
-	}
+	return m.request(topic, "", payload, timeout, h)
+}
 
-	correlationID := fmt.Sprintf("%d", time.Now().UnixNano())
-	response := make(chan *paho.Publish)
-
-	m.setRequest(correlationID, response)
-
-	_, err = m.client.Publish(context.Background(), &paho.Publish{
-		Properties: &paho.PublishProperties{
-			CorrelationData: []byte(correlationID),
-			ResponseTopic:   fmt.Sprintf("%s/responses", m.client.ClientID),
-		},
-		Topic:   topic,
-		Payload: p,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to request: %v", err)
-	}
-
-	select {
-	case <-time.After(timeout):
-		_ = m.getRequest(correlationID)
-
-		return errors.New("request timeout")
-	case resp := <-response:
-		h(resp.Topic, resp.Payload)
-		return nil
-	}
+// RequestWith sends a message to broker with specific response topic,
+// and waits for the response.
+func (m *mqttv5) RequestWith(topic, responseTopic string, payload interface{}, timeout time.Duration, h handler) error {
+	return m.request(topic, responseTopic, payload, timeout, h)
 }
 
 // SubscribeResponse creates new subscription for response topic.
@@ -179,7 +155,7 @@ func (m *mqttv5) GetConnectionStatus() ConnectionState {
 
 // Disconnect will close the connection to broker.
 func (m *mqttv5) Disconnect() {
-	m.client.Disconnect(&paho.Disconnect{
+	_ = m.client.Disconnect(&paho.Disconnect{
 		ReasonCode: 0,
 	})
 	m.client = nil
@@ -250,31 +226,6 @@ func (m *mqttv5) connect() error {
 		if sa.Reasons[0] != byte(m.config.QoS) {
 			return fmt.Errorf("Failed to subscribe: %d", sa.Reasons[0])
 		}
-	}
-
-	// subscribe for request/response
-	responseTopic := fmt.Sprintf("%s/responses", c.ClientID)
-
-	c.Router.RegisterHandler(responseTopic, func(p *paho.Publish) {
-		if p.Properties == nil || p.Properties.CorrelationData == nil {
-			return
-		}
-
-		response := m.getRequest(string(p.Properties.CorrelationData))
-		if response == nil {
-			return
-		}
-
-		response <- p
-	})
-
-	_, err = c.Subscribe(context.Background(), &paho.Subscribe{
-		Subscriptions: map[string]paho.SubscribeOptions{
-			responseTopic: {QoS: 1},
-		},
-	})
-	if err != nil {
-		return err
 	}
 
 	m.client = c
@@ -383,4 +334,64 @@ func (m *mqttv5) getRequest(id string) chan *paho.Publish {
 	delete(m.requests, id)
 
 	return response
+}
+
+func (m *mqttv5) requestsHandler(p *paho.Publish) {
+	if p.Properties == nil || p.Properties.CorrelationData == nil {
+		return
+	}
+
+	response := m.getRequest(string(p.Properties.CorrelationData))
+	if response == nil {
+		return
+	}
+
+	response <- p
+}
+
+func (m *mqttv5) request(topic, responseTopic string, payload interface{}, timeout time.Duration, h handler) error {
+	p, err := m.checkPayload(payload)
+	if err != nil {
+		return err
+	}
+	if responseTopic == "" {
+		responseTopic = fmt.Sprintf("%s/responses", m.client.ClientID)
+	}
+	correlationID := fmt.Sprintf("%d", time.Now().UnixNano())
+
+	m.client.Router.RegisterHandler(responseTopic, m.requestsHandler)
+	_, err = m.client.Subscribe(context.Background(), &paho.Subscribe{
+		Subscriptions: map[string]paho.SubscribeOptions{
+			responseTopic: {QoS: 1},
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	response := make(chan *paho.Publish)
+
+	m.setRequest(correlationID, response)
+
+	_, err = m.client.Publish(context.Background(), &paho.Publish{
+		Properties: &paho.PublishProperties{
+			CorrelationData: []byte(correlationID),
+			ResponseTopic:   responseTopic,
+		},
+		Topic:   topic,
+		Payload: p,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to request: %v", err)
+	}
+
+	select {
+	case <-time.After(timeout):
+		_ = m.getRequest(correlationID)
+
+		return errors.New("request timeout")
+	case resp := <-response:
+		h(resp.Topic, resp.Payload)
+		return nil
+	}
 }

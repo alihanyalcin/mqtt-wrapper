@@ -20,6 +20,9 @@ type MQTT interface {
 	Publish(string, interface{}) error
 	// Request sends a message to broker and waits for the response.
 	Request(string, interface{}, time.Duration, handler) error
+	// RequestWith sends a message to broker with specific response topic,
+	// and waits for the response.
+	RequestWith(string, string, interface{}, time.Duration, handler) error
 	// SubscribeResponse creates new subscription for response topic.
 	SubscribeResponse(string) error
 	// Respond sends message to response topic with correlation id (use inside HandleRequest).
